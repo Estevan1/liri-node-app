@@ -1,181 +1,165 @@
+// DEPENDENCIES
+// =====================================
+// Read and set environment variables
 require("dotenv").config();
 
-var keys = require("./keys.js");
+// Import the node-spotify-api NPM package.
+var Spotify = require("node-spotify-api");
 
-var request = require("request");
+// Import the API keys
+var keys = require("./keys");
 
-var Spotify = require("node-spotify-api")
+// Import the axios npm package.
+var axios = require("axios");
+
+// Import the moment npm package.
+var moment = require("moment");
+
+// Import the FS package for read/write.
+var fs = require("fs");
+
+// Initialize the spotify API client using our client id and secret
 var spotify = new Spotify(keys.spotify);
 
-var userOption = process.argv[2];
-var inputParameter = process.argv[3];
+// FUNCTIONS
+// =====================================
 
-userInputs(userOption, inputParameter);
-
-function  userInputs (userOption, inputParameter){
-    switch (userOption) {
-        case "concert-this":
-            showConcertInfo(inputParameter);
-            break;
-        case "spotify-this:
-            showSongInfo(inputParameter);
-            break;
-        case "movie-this":
-            showMovieInfo(inputParameter);
-        case "do-this":
-            showSomeInfo();
-            break;
-        default:
-            console.log("I dont understand")
-    }
-}
-
-// Function Bands In Town
-function showConcertInfo(inputParameter){
-    var queryUrl = "https://rest.bandsintown.com/artists/" + inputParameter + "/events?app_id=codingbootcamp";
-    request(queryUrl, function(error, response, body){
-        if (!error && response.statusCode === 200) {
-            var concerts = JSON.parse(body);
-            for (var i = 0; i < concerts.length; i++) {
-                
-                fs.appendFileSync("log.txt", "*****EVENT INFO*****\n");
-                console.log("*****EVENT INFO*****");
-                
-                fs.appendFileSync("log.txt", i+ "\n");
-                console.log(i);
-                
-                fs.appendFileSync("log.txt", "Name of Venue: " + concerts[i].venue.name+"\n");
-                console.log("Name of Venue: " + concerts[i].venue.name);
-
-                fs.appendFileSync("log.txt", "Venue Location: " + concerts[i].venue.city+"\n");
-                console.log("Venue Location: " + concerts[i].venue.city);
-
-                fs.appendFileSync("log.txt", "Date of Event: " + concerts[i].datetime+"\n");
-                console.log("Date of Event: " + concerts[i].datetime);
-
-                fs.appendFileSync("log.txt", "**************************" + "\n");
-                console.log("**************************");
-            }
-        } else {
-            console.log("Error Occured")
-        }
-    });
-}
-
-// Function for music info Spotify
-function showSongInfo(inputParameter){
-    if (inputParameter === undefined) {
-        // default song
-        inputParameter = "The Sign"; 
-    }
-    spotify.search({
-        type: "track",
-        query: inputParameter
-    },
-    function (err, data) {
-        if (err) {
-            console.log("error occured: " + err);
-            return;
-        }
-        var songs = data.tracks.items;
-
-        for (var i = 0; i < songs.length; i++) {
-            fs.appendFileSync("log.txt", "*******Song Info*******\n");
-            console.log("*******Song Info*******");
-            
-            fs.appendFileSync("log.txt", i + "\n");
-            console.log(i);
-
-            fs.appendFileSync("log.txt", "Artist: " + songs[i].artist[0].name + "\n");
-            console.log("Atist:  " + songs[i].artist[0].name);
-
-            fs.appendFileSync("log.txt", "Song Name: " + songs[i].name + "\n");
-            console.log("Song Name:  " + songs[i].name);
-
-            fs.appendFileSync("log.txt", "Preview Song: " + songs[i].preview_url + "\n");
-            console.log("Preview Song:  " + songs[i].preview_url);
-
-            fs.appendFileSync("log.txt", "Album: " + songs[i].album.name + "\n");
-            console.log("Preview Song:  " + songs[i].preview_url);
-
-            fs.appendFileSync("log.txt", "**********************\n");
-            console.log("**********************");
-        }
-    }
-    );
+// Helper function that gets the artist name
+var getArtistNames = function(artist) {
+  return artist.name;
 };
 
-//Function for Movie Info: OMDB
-function showMovieInfo(inputParameter){
-    if (inputParameter === undefined) {
-        inputParameter = "Mr. Nobody"
-        
-        fs.appendFileSync("log.txt", "---------------\n");
-        console.log("---------------");
+// Function for running a Spotify search
+var getMeSpotify = function(songName) {
+  if (songName === undefined) {
+    songName = "What's my age again";
+  }
 
-        fs.appendFileSync("log.txt", "If you havent watched 'Mr. Nobody,' then you should: http://www.imdb.com/title/tto485974/");
-        console.log("If you haven't watched 'Mr. Nobody,' then you should: http://www.imdb.com/title/tt0485947/")
+  spotify.search(
+    {
+      type: "track",
+      query: songName
+    },
+    function(err, data) {
+      if (err) {
+        console.log("Error occurred: " + err);
+        return;
+      }
 
-        fs.appendFileSync("log.txt", "It's on Netflix!\n");
+      var songs = data.tracks.items;
+
+      for (var i = 0; i < songs.length; i++) {
+        console.log(i);
+        console.log("artist(s): " + songs[i].artists.map(getArtistNames));
+        console.log("song name: " + songs[i].name);
+        console.log("preview song: " + songs[i].preview_url);
+        console.log("album: " + songs[i].album.name);
+        console.log("-----------------------------------");
+      }
     }
-    var queryUrl = "http://www.omdbapi.com/?t=" + inputParameter + "&y=&plot=short&apikey=c594021";
-    request(queryUrl, function(error, response, body){
-        //If request is succesful
-        if (!error && response.statusCode === 200) {
-            var movies = JSON.parse(body);
-            fs.appendFileSync("log.txt", "*******Movie Info*******\n");
-            console.log("*******Movie Info*******");
+  );
+};
 
-            fs.appendFileSync("log.txt", "Title: " + movies.Title + "\n");
-            console.log("Title: " + movies.Title);
+var getMyBands = function(artist) {
+  var queryURL = "https://rest.bandsintown.com/artists/" + artist + "/events?app_id=codingbootcamp";
 
-            fs.appendFileSync("log.txt", "Release Year: " + movies.Year + "\n");
-            console.log("Release Year: " + movies.Year);
+  axios.get(queryURL).then(
+    function(response) {
+      var jsonData = response.data;
 
-            fs.appendFileSync("log.txt", "IMDB Rating: " + movies.imdbRating + "\n");
-            console.log("IMDB Rating: " + movies.imdbRating);
+      if (!jsonData.length) {
+        console.log("No results found for " + artist);
+        return;
+      }
 
-            fs.appendFileSync("log.txt", "Rotten Tomatoes Rating: ", + getRottenTomatoesRatingValue(movies) + "\n");
-            console.log("Rotten Tomatoes Rating: " + getRottenTomatoesRatingValue(movies));
+      console.log("Upcoming concerts for " + artist + ":");
 
-            fs.appendFileSync("log.txt", "Country of Production: " + movies.Country + "\n");
-            console.log("Country of Production: " + movies.Country);
+      for (var i = 0; i < jsonData.length; i++) {
+        var show = jsonData[i];
 
-            fs.appendFileSync("log.txt", "Language: " + movies.Language + "\n")
-            console.log("Language: " + movies.Language);
+        // Print data about each concert
+        // If a concert doesn't have a region, display the country instead
+        // Use moment to format the date
+        console.log(
+          show.venue.city +
+            "," +
+            (show.venue.region || show.venue.country) +
+            " at " +
+            show.venue.name +
+            " " +
+            moment(show.datetime).format("MM/DD/YYYY")
+        );
+      }
+    }
+  );
+};
 
-            fs.appendFileSync("log.txt", "Plot: " + movies.Plot + "\n");
-            console.log("Plot: " + movies.Plot);
+// Function for running a Movie Search
+var getMeMovie = function(movieName) {
+  if (movieName === undefined) {
+    movieName = "Mr Nobody";
+  }
 
-            fs.appendFileSync("log.txt", "Actors: " + movies.Actor + "\n");
-            console.log("Actor: " + movies.Actor);
+  var urlHit =
+    "http://www.omdbapi.com/?t=" + movieName + "&y=&plot=full&tomatoes=true&apikey=trilogy";
 
-        } else {
-            console.log("Error Occured");
-        }
-    });
-}
+  axios.get(urlHit).then(
+    function(response) {
+      var jsonData = response.data;
 
-// function to get proper Rotten Tomatoes Rating
+      console.log("Title: " + jsonData.Title);
+      console.log("Year: " + jsonData.Year);
+      console.log("Rated: " + jsonData.Rated);
+      console.log("IMDB Rating: " + jsonData.imdbRating);
+      console.log("Country: " + jsonData.Country);
+      console.log("Language: " + jsonData.Language);
+      console.log("Plot: " + jsonData.Plot);
+      console.log("Actors: " + jsonData.Actors);
+      console.log("Rotten Tomatoes Rating: " + jsonData.Ratings[1].Value);
+    }
+  );
+};
 
-function getRottenTomatoesRatingObject(data) {
-    return data.Ratings.find(function (item){
-        return item.Source === "Rotten Tomatoes";
-    });
-}
+// Function for running a command based on text file
+var doWhatItSays = function() {
+  fs.readFile("random.txt", "utf8", function(error, data) {
+    console.log(data);
 
-function getRottenTomatoesRatingValue(data) {
-    return getRottenTomatoesRatingObject(data).value;
-}
+    var dataArr = data.split(",");
 
-// function for reading out of random.txt file
+    if (dataArr.length === 2) {
+      pick(dataArr[0], dataArr[1]);
+    } else if (dataArr.length === 1) {
+      pick(dataArr[0]);
+    }
+  });
+};
 
-function showSomeInfo(){
-    fs.readFile("random.txt", "utf8", function(err,data){
-        if (err){
-            return console.log(err);
-        }
-        var dataArr = data.split(",");
-        userInputs(data[0], dataArr[1]);
-    });
-}
+// Function for determining which command is executed
+var pick = function(caseData, functionData) {
+  switch (caseData) {
+  case "concert-this":
+    getMyBands(functionData);
+    break;
+  case "spotify-this-song":
+    getMeSpotify(functionData);
+    break;
+  case "movie-this":
+    getMeMovie(functionData);
+    break;
+  case "do-what-it-says":
+    doWhatItSays();
+    break;
+  default:
+    console.log("LIRI doesn't know that");
+  }
+};
+
+// Function which takes in command line arguments and executes correct function accordingly
+var runThis = function(argOne, argTwo) {
+  pick(argOne, argTwo);
+};
+
+// MAIN PROCESS
+// =====================================
+runThis(process.argv[2], process.argv.slice(3).join(" "));
