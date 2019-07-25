@@ -14,5 +14,4 @@ Moment
 
 DotEnv
 
-![GitHub Logo](/images/logo.png)
-Format: ![Alt Text](url)
+![Screenshot (30)](https://user-images.githubusercontent.com/49180141/61915690-8cdf1d00-aefa-11e9-9add-3b39e728e698.png)
